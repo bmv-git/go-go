@@ -1,1 +1,1 @@
-Go-разработчик, https://brunoyam.com/online-kursy/go
+курс Go-разработчик, https://brunoyam.com/online-kursy/go
