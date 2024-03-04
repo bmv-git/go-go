@@ -13,8 +13,8 @@ func hello(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 func main() {
-	port := 8080
+	port := ":8080"
 	http.HandleFunc("/", hello)
 	log.Printf("Server is starting on port :%v", port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), nil))
+	log.Fatal(http.ListenAndServe(port, nil))
 }
