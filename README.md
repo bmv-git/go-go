@@ -1,10 +1,13 @@
 курс Go-разработчик, https://brunoyam.com/online-kursy/go
 
-hw4-www:  - дз к уроку 4. 
-    sandbox - тестовый пакет вариантов преобразования
-        int to string, тест Benchmark  и скрин исполнения
-    www-service-gin - Tutorial: Developing a RESTful API with Go and Gin
+hw4-www:  - дз к уроку 4.
+
+    sandbox - тестовый пакет вариантов преобразования int to string, тест Benchmark  и скрин исполнения.
+	
+	www-service-gin - Tutorial: Developing a RESTful API with Go and Gin
+ 
     файлы:
+	
     i-to-a.go - реализация функции тестового пакета sandbox
     hello-std.go - www-сервер с пакетом net/http
     hello-gin.go - www-сервер с пакетом gin
