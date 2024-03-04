@@ -11,5 +11,8 @@ func main() {
 	r.GET("/", func(c *gin.Context) {
 		c.String(http.StatusOK, "Hello world!")
 	})
-	r.Run(port)
+	err := r.Run(port)
+	if err != nil {
+		return
+	}
 }
