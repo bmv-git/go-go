@@ -32,7 +32,22 @@ var albums = []album{
 //     to send more compact JSON. In practice, the indented form is much easier to work with
 //     when debugging and the size difference is usually small.
 func getAlbums(c *gin.Context) {
-	c.JSON(http.StatusOK, albums)
+	c.IndentedJSON(http.StatusOK, albums)
+}
+
+// postAlbums adds an album from JSON received in the request body.
+func postAlbums(c *gin.Context) {
+	var newAlbum album
+
+	// Calling BindJSON to bind the received JSON to
+	// newAlbum.
+	if err := c.BindJSON(&newAlbum); err != nil {
+		return
+	}
+
+	// Add the new album to the slice.
+	albums = append(albums, newAlbum)
+	c.IndentedJSON(http.StatusCreated, newAlbum)
 }
 
 //   - Initializing a Gin router using Default.
@@ -45,8 +60,9 @@ func getAlbums(c *gin.Context) {
 func main() {
 	router := gin.Default()
 	router.GET("/albums", getAlbums)
+	router.POST("/albums", postAlbums)
 
-	err := router.Run("localhost:8080")
+	err := router.Run("localhost:8000")
 	if err != nil {
 		return
 	}
