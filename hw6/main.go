@@ -213,6 +213,5 @@ func main() {
 	r.PUT("/task/:id", updateTask)
 	r.DELETE("/tasks/:id", deleteTask)
 	r.GET("/tasks", listTasks)
-
 	r.Run(":8080")
 }
