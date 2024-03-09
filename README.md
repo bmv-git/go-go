@@ -1,8 +1,15 @@
 курс Go-разработчик, https://brunoyam.com/online-kursy/go
 
+
+hw6: - дз к уроку 6.
+    sandbox - пакет для тестирования UUID
+    main.go - доработка программы урока 6 - использование UUID v.4 
+                в качестве Task ID
+hw5: - 
 hw4-www:  - дз к уроку 4.
 
-    sandbox - тестовый пакет вариантов преобразования int to string, тест Benchmark  и скрин исполнения.
+    sandbox - пакет для тестирования преобразования int to string, 
+                тест Benchmark  и скрин исполнения.
 	
 	www-service-gin - Tutorial: Developing a RESTful API with Go and Gin
  

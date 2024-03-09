@@ -17,6 +17,8 @@ type Task struct {
 	Priority    uint8  `json:"priority,omitempty"`
 }
 
+var tasks = make(map[uint]Task)
+
 //type TaskResponse struct {
 // Tasks []Task `json:"tasks"`
 // total int    `json:"total"`
@@ -145,8 +147,6 @@ func loadTasksFromFile() error {
 	}
 	return nil
 }
-
-var tasks = make(map[uint]Task)
 
 func listTasks(c *gin.Context) {
 	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
