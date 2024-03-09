@@ -17,9 +17,9 @@ type Task struct {
 	Priority    uint8  `json:"priority,omitempty"`
 }
 
-var tasks = []Task{}     // срез структур Task
-var index map[string]int // [ID] = индекс структуры в срезе
-var tasksPerPage = 5     // число задач на страницу для пагинации
+var tasks = make([]Task, 0) // срез структур Task
+var index map[string]int    // [ID] = индекс структуры в срезе
+var tasksPerPage = 5        // число задач на страницу для пагинации
 
 func createIndex() {
 	index = make(map[string]int)
@@ -213,5 +213,9 @@ func main() {
 	r.PUT("/task/:id", updateTask)
 	r.DELETE("/tasks/:id", deleteTask)
 	r.GET("/tasks", listTasks)
-	r.Run(":8080")
+
+	err = r.Run(":8080")
+	if err != nil {
+		return
+	}
 }
