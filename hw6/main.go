@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 	"net/http"
 	"os"
-	"sort"
 	"strconv"
 )
 
@@ -18,11 +17,11 @@ type Task struct {
 	Priority    uint8  `json:"priority,omitempty"`
 }
 
-var tasks = make([]Task)
-var index = make(map[string]int)
-var linesPerPage = 10
+var tasks = []Task{}     // срез структур Task
+var index map[string]int // [ID] = индекс структуры в срезе
+var tasksPerPage = 5     // число задач на страницу для пагинации
 
-func createIndex() error {
+func createIndex() {
 	index = make(map[string]int)
 	for i, task := range tasks {
 		key := task.ID
@@ -38,11 +37,13 @@ func createTask(c *gin.Context) {
 
 		return
 	}
-	// генерация строкового ID
+	// генерируем строковый ID
 	task.ID = uuid.NewString()
 	tasks = append(tasks, task)
+
 	// обновляем индекс
-	_ = createIndex()
+	createIndex()
+
 	// отправляем сообщение клиенту
 	c.JSON(http.StatusOK, gin.H{"message": "задача создана с номером:" + task.ID})
 	// записываем файл
@@ -56,8 +57,10 @@ func getAllTasks(c *gin.Context) {
 	// проверяем детали запроса /all?status=foo&priority=bar
 	statusStr, existsStatus := c.GetQuery("status")
 	priorityStr, existsPriority := c.GetQuery("priority")
+
 	// если деталей нет, то возвращаем все записи tasks и кэшируем
 	if !existsStatus && !existsPriority {
+
 		// кэшируем (где?)
 		c.Header("Cache-Control", "public, max-age=3600")
 		c.JSON(http.StatusOK, tasks)
@@ -89,22 +92,21 @@ func updateTask(c *gin.Context) {
 	// проверяем параметр PUT запроса /task:id
 	id := c.Param("id")
 
+	// проверяем, есть ли индекс для данного id
 	i, ok := index[id]
-	task, ok := tasks[id]
 	if !ok {
 		c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
 		return
 	}
-
-	err := c.BindJSON(&task)
+	// если индекс есть, то обновляем i-ю задачу по запросу
+	err := c.BindJSON(&tasks[i])
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// записываем обновленную задачу в карту
-	tasks[id] = task
 	// отправляем клиенту код завершения 200 и обновленную задачу
-	c.JSON(http.StatusOK, task)
+	c.JSON(http.StatusOK, tasks[i])
+
 	// записываем все задачи в файл
 	err = saveTasksToFile(tasks)
 	if err != nil {
@@ -116,9 +118,16 @@ func deleteTask(c *gin.Context) {
 	// проверяем параметр DELETE запроса /tasks:id
 	id := c.Param("id")
 
-	_, ok := tasks[id]
+	// проверяем, есть ли индекс для данного id
+	i, ok := index[id]
 	if ok {
-		delete(tasks, id)
+		// сдвигаем срез для удаления i-й задачи
+		tasks = append(tasks[:i], tasks[i+1:]...)
+
+		// обновляем индекс
+		createIndex()
+
+		// отправляем ответ клиенту и перезаписыаем файл
 		c.JSON(http.StatusOK, gin.H{"message": "task deleted"})
 		err := saveTasksToFile(tasks)
 		if err != nil {
@@ -129,7 +138,7 @@ func deleteTask(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "task not found"})
 }
 
-func saveTasksToFile(tasks map[string]Task) error {
+func saveTasksToFile(tasks []Task) error {
 	jsonData, err := json.MarshalIndent(tasks, "", "\t")
 	if err != nil {
 		return err
@@ -161,35 +170,35 @@ func loadTasksFromFile() error {
 }
 
 func listTasks(c *gin.Context) {
-	// проверка деталей GET запроса /tasks?page= (если querry не указан, то номер страницы = 1)
+	// проверка деталей GET запроса /tasks?page=
+	// (если querry не указан, то номер страницы = 1)
 	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// вспомогательный срез для постраничного вывода
-	slice := make([]Task, 0, linesPerPage)
+
 	// выбираем задачи для "нужной" страницы вывода (с номером page из запроса или 1 по умолчанию)...
 	// вопрос в другом - по какому критерию выбирать?
 	// предполагается, что задачи сортируются по ID.
-	// В нашем случае ID имеет строковый тип и не является индексом (имеет строго случайный порядок - по двум причинам:
+	// В нашем случае ID имеет строковый тип и не является индексом
+	// (имеет строго случайный порядок - по двум причинам:
 	// 1) UUID генерирутся случайным образом
-	// 2) элементы карты не сортируются в принципе)
-	// Таким образом, для пагинации надо создать индекс (вспомогательную карту с UUID в качестве ключа
-	// целочисленным индексом (i) в качестве значения)...
+	// 2) элементы карты не сортируются в принципе).
+
+	// Таким образом, для пагинации надо создать индекс (вспомогательную карту
+	// с UUID в качестве ключа и целочисленным индексом (i) в качестве значения)...
 	// При каждом создании или удалении задачи индекс надо будет обновлять.
-	for i, task := range tasks {
-		if i > uint((page-1)*linesPerPage) && i <= uint(page*linesPerPage) {
-			slice = append(slice, task)
-		}
+
+	iMin := (page - 1) * tasksPerPage
+	if iMin >= len(tasks) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "на странице нет задач"})
 	}
-	sort.Slice(slice, func(i, j int) bool {
-		return slice[i].ID < slice[j].ID
-	})
-	response := make(map[string]interface{})
-	response["tasks"] = slice
-	response["total"] = len(tasks)
-	c.JSON(http.StatusOK, response)
+	iMax := page * tasksPerPage
+	if iMax > len(tasks) {
+		iMax = len(tasks)
+	}
+	c.JSON(http.StatusOK, tasks[iMin:iMax])
 }
 
 func main() {
