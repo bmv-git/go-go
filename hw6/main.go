@@ -17,15 +17,14 @@ type Task struct {
 	Priority    uint8  `json:"priority,omitempty"`
 }
 
-var tasks = make([]Task, 0) // срез структур Task
-var index map[string]int    // [ID] = индекс структуры в срезе
-var tasksPerPage = 5        // число задач на страницу для пагинации
+var tasks []Task         // срез структур Task
+var index map[string]int // [ID] = индекс структуры в срезе
+var tasksPerPage = 5     // число задач на страницу для пагинации
 
 func createIndex() {
 	index = make(map[string]int)
 	for i, task := range tasks {
-		key := task.ID
-		index[key] = i
+		index[task.ID] = i
 	}
 }
 
@@ -48,7 +47,6 @@ func createTask(c *gin.Context) {
 	err := c.BindJSON(&task)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-
 		return
 	}
 	// генерируем строковый ID (UUID v.4)
@@ -138,6 +136,7 @@ func updateTask(c *gin.Context) {
 	err = saveTasksToFile(tasks)
 	if err != nil {
 		c.JSON(http.StatusMultiStatus, gin.H{"error": err.Error()})
+		return
 	}
 }
 
@@ -148,22 +147,25 @@ func deleteTask(c *gin.Context) {
 
 	// проверяем, есть ли индекс для данного id
 	i, ok := index[id]
-	if ok {
-		// сдвигаем срез для удаления i-й задачи
-		tasks = append(tasks[:i], tasks[i+1:]...)
-
-		// обновляем индекс
-		createIndex()
-
-		// отправляем ответ клиенту и перезаписыаем файл
-		c.JSON(http.StatusOK, gin.H{"message": "task deleted"})
-		err := saveTasksToFile(tasks)
-		if err != nil {
-			c.JSON(http.StatusMultiStatus, gin.H{"error": err.Error()})
-		}
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "task not found"})
+	// сдвигаем срез для удаления i-й задачи
+	tasks = append(tasks[:i], tasks[i+1:]...)
+
+	// обновляем индекс
+	createIndex()
+
+	// отправляем ответ клиенту и перезаписыаем файл
+	c.JSON(http.StatusOK, gin.H{"message": "task deleted"})
+
+	// записываем срез задач в файл
+	err := saveTasksToFile(tasks)
+	if err != nil {
+		c.JSON(http.StatusMultiStatus, gin.H{"error": err.Error()})
+		return
+	}
 }
 
 func saveTasksToFile(tasks []Task) error {
@@ -221,7 +223,8 @@ func listTasks(c *gin.Context) {
 	// страница формируется сразу из среза задач по нижнему и верхнему индексу
 	iL := (page - 1) * tasksPerPage
 	if iL >= len(tasks) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "на странице нет задач"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "на этой странице нет задач"})
+		return
 	}
 	iH := page * tasksPerPage
 	if iH > len(tasks) {
@@ -229,14 +232,22 @@ func listTasks(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, tasks[iL:iH])
 }
+func homePage(c *gin.Context) {
+	c.String(http.StatusOK, "СПИСОК ЗАДАЧ\n")
+}
 
 func main() {
 	err := loadTasksFromFile()
 	if err != nil {
 		return
 	}
+
+	// обновляем индекс
+	createIndex()
+
 	r := gin.Default()
 
+	r.GET("/", homePage)
 	r.POST("/task", createTask)
 	r.GET("/all", getAllTasks)
 	r.GET("/tasks", listTasks)
