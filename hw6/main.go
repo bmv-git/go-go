@@ -29,6 +29,7 @@ func createIndex() {
 	}
 }
 
+// обработчик запроса POST /task
 func createTask(c *gin.Context) {
 	// создаем новую задачу
 	var task Task
@@ -60,6 +61,13 @@ func createTask(c *gin.Context) {
 	createIndex()
 
 	// отправляем сообщение клиенту
+	// func (c *Context) JSON(code int, obj any)
+	// JSON serializes the given struct (в данном случае карту gin.H)
+	// converted as JSON into the response body.
+	// It also sets the Content-Type as "application/json".
+
+	// type H map[string]any
+	// H is a shortcut for map[string]any
 	c.JSON(http.StatusOK, gin.H{"message": "задача создана с номером:" + task.ID})
 
 	// записываем файл
@@ -106,7 +114,7 @@ func getAllTasks(c *gin.Context) {
 	c.JSON(http.StatusOK, filterTasks)
 }
 
-// обработчик запроса PUT /task:id
+// обработчик запроса PUT /task/:id
 func updateTask(c *gin.Context) {
 	// проверяем параметр
 	id := c.Param("id")
@@ -133,7 +141,7 @@ func updateTask(c *gin.Context) {
 	}
 }
 
-// обработчик запроса DELETE /tasks:id
+// обработчик запроса DELETE /tasks/:id
 func deleteTask(c *gin.Context) {
 	// проверяем параметр
 	id := c.Param("id")
@@ -229,11 +237,11 @@ func main() {
 	}
 	r := gin.Default()
 
-	r.GET("/all", getAllTasks)
 	r.POST("/task", createTask)
+	r.GET("/all", getAllTasks)
+	r.GET("/tasks", listTasks)
 	r.PUT("/task/:id", updateTask)
 	r.DELETE("/tasks/:id", deleteTask)
-	r.GET("/tasks", listTasks)
 
 	err = r.Run(":8080")
 	if err != nil {
