@@ -30,15 +30,30 @@ func createIndex() {
 }
 
 func createTask(c *gin.Context) {
+	// создаем новую задачу
 	var task Task
+
+	//привязываем данные запроса (JSON) к задаче task (структуры Тask)
+	// *) BindJSON - это реализация интерфейса Binding для входных данных
+	// в формате JSON.
+
+	// type Binding interface {
+	//	Name() string
+	//	Bind(*http.Request, any) error
+	// }
+	// Binding describes the interface which needs to be implemented
+	// for binding the data present in the request such as JSON request body,
+	// query parameters or the form POST.
 	err := c.BindJSON(&task)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 
 		return
 	}
-	// генерируем строковый ID
+	// генерируем строковый ID (UUID v.4)
 	task.ID = uuid.NewString()
+
+	// записываем задачу в срез задач
 	tasks = append(tasks, task)
 
 	// обновляем индекс
@@ -46,6 +61,7 @@ func createTask(c *gin.Context) {
 
 	// отправляем сообщение клиенту
 	c.JSON(http.StatusOK, gin.H{"message": "задача создана с номером:" + task.ID})
+
 	// записываем файл
 	err = saveTasksToFile(tasks)
 	if err != nil {
@@ -53,8 +69,9 @@ func createTask(c *gin.Context) {
 	}
 }
 
+// обработчик запроса GET /all?status=  &priority=
 func getAllTasks(c *gin.Context) {
-	// проверяем детали запроса /all?status=foo&priority=bar
+	// проверяем детали запроса
 	statusStr, existsStatus := c.GetQuery("status")
 	priorityStr, existsPriority := c.GetQuery("priority")
 
@@ -63,6 +80,7 @@ func getAllTasks(c *gin.Context) {
 
 		// кэшируем (где?)
 		c.Header("Cache-Control", "public, max-age=3600")
+		// возвращаем все записи tasks
 		c.JSON(http.StatusOK, tasks)
 		return
 	}
@@ -88,8 +106,9 @@ func getAllTasks(c *gin.Context) {
 	c.JSON(http.StatusOK, filterTasks)
 }
 
+// обработчик запроса PUT /task:id
 func updateTask(c *gin.Context) {
-	// проверяем параметр PUT запроса /task:id
+	// проверяем параметр
 	id := c.Param("id")
 
 	// проверяем, есть ли индекс для данного id
@@ -114,8 +133,9 @@ func updateTask(c *gin.Context) {
 	}
 }
 
+// обработчик запроса DELETE /tasks:id
 func deleteTask(c *gin.Context) {
-	// проверяем параметр DELETE запроса /tasks:id
+	// проверяем параметр
 	id := c.Param("id")
 
 	// проверяем, есть ли индекс для данного id
@@ -169,9 +189,9 @@ func loadTasksFromFile() error {
 	return nil
 }
 
+// обработчик запроса GET /tasks?page=
 func listTasks(c *gin.Context) {
-	// проверка деталей GET запроса /tasks?page=
-	// (если querry не указан, то номер страницы = 1)
+	// (если ?query не указан, то номер страницы = 1)
 	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -191,15 +211,15 @@ func listTasks(c *gin.Context) {
 	// При каждом создании или удалении задачи индекс надо будет обновлять.
 
 	// страница формируется сразу из среза задач по нижнему и верхнему индексу
-	iMin := (page - 1) * tasksPerPage
-	if iMin >= len(tasks) {
+	iL := (page - 1) * tasksPerPage
+	if iL >= len(tasks) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "на странице нет задач"})
 	}
-	iMax := page * tasksPerPage
-	if iMax > len(tasks) {
-		iMax = len(tasks)
+	iH := page * tasksPerPage
+	if iH > len(tasks) {
+		iH = len(tasks)
 	}
-	c.JSON(http.StatusOK, tasks[iMin:iMax])
+	c.JSON(http.StatusOK, tasks[iL:iH])
 }
 
 func main() {
