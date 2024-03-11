@@ -60,13 +60,12 @@ func createTask(c *gin.Context) {
 
 	// отправляем сообщение клиенту
 	// func (c *Context) JSON(code int, obj any)
-	// JSON serializes the given struct (в данном случае карту gin.H)
-	// converted as JSON into the response body.
+	// JSON serializes the given struct as JSON into the response body.
 	// It also sets the Content-Type as "application/json".
 
 	// type H map[string]any
 	// H is a shortcut for map[string]any
-	c.JSON(http.StatusOK, gin.H{"message": "задача создана с номером:" + task.ID})
+	c.JSON(http.StatusOK, gin.H{"message": "задача создана с номером: " + task.ID})
 
 	// записываем файл
 	err = saveTasksToFile(tasks)
